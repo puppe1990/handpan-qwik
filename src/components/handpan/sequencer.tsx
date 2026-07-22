@@ -2,6 +2,8 @@ import { component$, useStore, useVisibleTask$ } from "@builder.io/qwik";
 import type { NoteConfig } from "../../lib/types";
 import { engine } from "../../audio/engine";
 import { historyManager } from "../../audio/history";
+import { DEMO_SONGS } from "../../lib/demo-songs";
+import { appUi } from "../../lib/app-state";
 
 interface SequencerProps {
   notes: NoteConfig[];
@@ -18,12 +20,15 @@ export const Sequencer = component$<SequencerProps>(({ notes }) => {
       boolean[]
     >,
     showClearConfirm: false,
+    selectedSongId: DEMO_SONGS[0]?.id || "forest-pulse",
+    loadedSongName: "" as string,
   });
 
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ cleanup }) => {
     engine.onSequencerStep = (step) => {
       state.activeStep = step;
+      state.isPlaying = engine.sequencerState.isPlaying;
     };
     cleanup(() => {
       engine.onSequencerStep = null;
@@ -32,6 +37,101 @@ export const Sequencer = component$<SequencerProps>(({ notes }) => {
 
   return (
     <div class="bg-zinc-950/70 border border-zinc-900 rounded-2xl p-6 shadow-xl backdrop-blur-md">
+      {/* Demo songs library */}
+      <div class="mb-6 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold text-emerald-400 tracking-wide">
+              Demo Songs
+            </h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Load a composed handpan piece into the sequencer and press play
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select
+              value={state.selectedSongId}
+              onChange$={(_, el) => {
+                state.selectedSongId = el.value;
+              }}
+              class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 min-w-[160px]"
+            >
+              {DEMO_SONGS.map((song) => (
+                <option key={song.id} value={song.id}>
+                  {`${song.name} · ${song.bpm} BPM`}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick$={() => {
+                historyManager.saveState();
+                engine.init();
+                const ok = engine.loadDemoSong(state.selectedSongId, false);
+                if (!ok) return;
+                state.bpm = engine.sequencerState.bpm;
+                state.stepsCount = engine.sequencerState.stepsCount;
+                state.grid = JSON.parse(
+                  JSON.stringify(engine.sequencerState.grid),
+                );
+                state.isPlaying = false;
+                state.activeStep = -1;
+                const song = DEMO_SONGS.find(
+                  (s) => s.id === state.selectedSongId,
+                );
+                state.loadedSongName = song?.name || "";
+                appUi.bump();
+              }}
+              class="px-4 py-2 rounded-xl text-xs font-bold bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-slate-200 transition-all"
+            >
+              Load
+            </button>
+            <button
+              type="button"
+              onClick$={() => {
+                historyManager.saveState();
+                engine.init();
+                const ok = engine.loadDemoSong(state.selectedSongId, true);
+                if (!ok) return;
+                state.bpm = engine.sequencerState.bpm;
+                state.stepsCount = engine.sequencerState.stepsCount;
+                state.grid = JSON.parse(
+                  JSON.stringify(engine.sequencerState.grid),
+                );
+                state.isPlaying = true;
+                const song = DEMO_SONGS.find(
+                  (s) => s.id === state.selectedSongId,
+                );
+                state.loadedSongName = song?.name || "";
+                appUi.bump();
+              }}
+              class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-400 hover:bg-emerald-500 text-zinc-950 shadow-md transition-all"
+            >
+              Load & Play ▶
+            </button>
+          </div>
+        </div>
+        {(() => {
+          const song = DEMO_SONGS.find((s) => s.id === state.selectedSongId);
+          if (!song) return null;
+          return (
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              <span class="text-slate-300 font-semibold">{song.name}</span>
+              {" — "}
+              {song.description}{" "}
+              <span class="font-mono text-slate-500">
+                ({song.scaleName} · {song.drumType} · {song.stepsCount} steps)
+              </span>
+              {state.loadedSongName === song.name && (
+                <span class="ml-2 text-emerald-400 font-semibold">
+                  ● Loaded
+                </span>
+              )}
+            </p>
+          );
+        })()}
+      </div>
+
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-zinc-900">
         <div>
           <h2 class="text-lg font-bold text-slate-100 tracking-wide">

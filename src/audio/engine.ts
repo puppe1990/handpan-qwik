@@ -2,6 +2,11 @@ import { NoteConfig, DrumType, ScalePreset, PresetData, StepSequencerState, Midi
 import { SCALE_PRESETS } from './scales';
 export { SCALE_PRESETS };
 import { audioBufferToWav } from './wav-encoder';
+import {
+  type DemoSong,
+  songPatternToGrid,
+  getDemoSong,
+} from '../lib/demo-songs';
 
 // Default professional scales
 export class AudioEngine {
@@ -411,6 +416,38 @@ export class AudioEngine {
         this.sequencerState.grid[numKey] = arr.slice(0, count);
       }
     });
+  }
+
+  /** Load a full demo song: scale, drum type, FX, sequencer grid. */
+  loadDemoSong(songOrId: DemoSong | string, autoplay = false) {
+    const song =
+      typeof songOrId === 'string' ? getDemoSong(songOrId) : songOrId;
+    if (!song) return false;
+
+    const scale =
+      SCALE_PRESETS.find((s) => s.name === song.scaleName) || SCALE_PRESETS[0];
+
+    // Set instrument first so loadDefaultNotes applies correct overtone profiles
+    this.drumType = song.drumType;
+    this.loadDefaultNotes(scale);
+    this.sequencerState.bpm = song.bpm;
+    this.sequencerState.stepsCount = song.stepsCount;
+    this.sequencerState.grid = songPatternToGrid(song);
+    this.sequencerState.activeStep = -1;
+
+    if (song.reverb) {
+      this.reverbRoomSize = song.reverb.roomSize;
+      this.reverbDamping = song.reverb.damping;
+      this.reverbMix = song.reverb.mix;
+      this.updateReverbParams();
+    }
+
+    if (autoplay) {
+      this.stopSequencer();
+      this.startSequencer();
+    }
+
+    return true;
   }
 
   startSequencer() {
