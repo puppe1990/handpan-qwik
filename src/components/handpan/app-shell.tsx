@@ -20,6 +20,8 @@ type TabId =
   | "cloud"
   | "automation";
 
+const THEME_KEY = "handpan-theme";
+
 export const AppShell = component$(() => {
   const state = useStore({
     drumType: engine.drumType as DrumType,
@@ -29,10 +31,22 @@ export const AppShell = component$(() => {
     canUndo: false,
     canRedo: false,
     audioReady: false,
+    theme: "dark" as "dark" | "light",
   });
 
   // eslint-disable-next-line qwik/no-use-visible-task
   useVisibleTask$(({ cleanup }) => {
+    // Restore theme preference
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "light" || saved === "dark") {
+        state.theme = saved;
+      }
+    } catch {
+      /* ignore */
+    }
+    document.documentElement.dataset.theme = state.theme;
+
     historyManager.saveState();
     const sync = () => {
       state.drumType = engine.drumType;
@@ -104,6 +118,38 @@ export const AppShell = component$(() => {
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id="btn-theme-toggle"
+              aria-label={
+                state.theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              title={
+                state.theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              onClick$={(e) => {
+                e.stopPropagation();
+                const next = state.theme === "dark" ? "light" : "dark";
+                state.theme = next;
+                document.documentElement.dataset.theme = next;
+                try {
+                  localStorage.setItem(THEME_KEY, next);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-slate-300 transition-all"
+            >
+              <span class="text-sm leading-none" aria-hidden="true">
+                {state.theme === "dark" ? "☀" : "☾"}
+              </span>
+              {state.theme === "dark" ? "Light" : "Dark"}
+            </button>
+
             <button
               type="button"
               disabled={!state.canUndo}

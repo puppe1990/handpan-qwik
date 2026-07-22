@@ -16,6 +16,21 @@ export default component$(() => {
     <QwikCityProvider>
       <head>
         <meta charset="utf-8" />
+        {/* Prevent theme flash before hydration */}
+        <script
+          dangerouslySetInnerHTML={`
+            try {
+              var t = localStorage.getItem('handpan-theme');
+              if (t === 'light' || t === 'dark') {
+                document.documentElement.dataset.theme = t;
+              } else {
+                document.documentElement.dataset.theme = 'dark';
+              }
+            } catch (e) {
+              document.documentElement.dataset.theme = 'dark';
+            }
+          `}
+        />
         {!isDev && (
           <link
             rel="manifest"
