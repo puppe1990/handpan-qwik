@@ -21,7 +21,11 @@
     "lint": "eslint \"src/**/*.ts*\"",
     "preview": "qwik build preview && vite preview --open",
     "start": "vite --open --mode ssr",
-    "qwik": "qwik"
+    "qwik": "qwik",
+    "prepare": "husky",
+    "test": "vitest run",
+    "test.watch": "vitest",
+    "ci": "npm run build.types && npm run lint && npm run fmt.check && npm test && npm run build"
   },
   "devDependencies": {
     "@builder.io/qwik": "^1.14.1",
@@ -33,12 +37,23 @@
     "eslint": "9.25.1",
     "eslint-plugin-qwik": "^1.14.1",
     "globals": "16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "3.3.3",
     "tailwindcss": "^4.3.3",
     "typescript": "5.4.5",
     "typescript-eslint": "8.26.1",
     "undici": "*",
     "vite": "5.3.5",
-    "vite-tsconfig-paths": "^4.2.1"
+    "vite-tsconfig-paths": "^4.2.1",
+    "vitest": "^4.1.10"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,md,css,yml,yaml}": [
+      "prettier --write"
+    ],
+    "src/**/*.{ts,tsx}": [
+      "eslint --max-warnings=0 --no-warn-ignored"
+    ]
   }
 }

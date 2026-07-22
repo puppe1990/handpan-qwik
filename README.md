@@ -39,12 +39,12 @@ Open the URL Vite prints (usually `http://localhost:5173`). **Tap the page once*
 
 ## Scripts
 
-| Command        | Description                |
-|----------------|----------------------------|
-| `npm start`    | Dev server (SSR mode)      |
-| `npm run build`| Production build           |
+| Command           | Description              |
+| ----------------- | ------------------------ |
+| `npm start`       | Dev server (SSR mode)    |
+| `npm run build`   | Production build         |
 | `npm run preview` | Preview production build |
-| `npm run lint` | ESLint                     |
+| `npm run lint`    | ESLint                   |
 
 ## Architecture
 

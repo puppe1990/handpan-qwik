@@ -19,13 +19,13 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
   const view = new DataView(wavBuffer);
 
   /* RIFF identifier */
-  writeString(view, 0, 'RIFF');
+  writeString(view, 0, "RIFF");
   /* file length */
   view.setUint32(4, 36 + bufferLength, true);
   /* RIFF type */
-  writeString(view, 8, 'WAVE');
+  writeString(view, 8, "WAVE");
   /* format chunk identifier */
-  writeString(view, 12, 'fmt ');
+  writeString(view, 12, "fmt ");
   /* format chunk length */
   view.setUint32(16, 16, true);
   /* sample format (raw) */
@@ -41,14 +41,14 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
   /* bits per sample */
   view.setUint16(34, bitDepth, true);
   /* data chunk identifier */
-  writeString(view, 36, 'data');
+  writeString(view, 36, "data");
   /* data chunk length */
   view.setUint32(40, bufferLength, true);
 
   // Write PCM audio samples
   floatTo16BitPCM(view, 44, result);
 
-  return new Blob([wavBuffer], { type: 'audio/wav' });
+  return new Blob([wavBuffer], { type: "audio/wav" });
 }
 
 function interleave(inputL: Float32Array, inputR: Float32Array): Float32Array {
@@ -71,9 +71,13 @@ function writeString(view: DataView, offset: number, string: string) {
   }
 }
 
-function floatTo16BitPCM(output: DataView, offset: number, input: Float32Array) {
+function floatTo16BitPCM(
+  output: DataView,
+  offset: number,
+  input: Float32Array,
+) {
   for (let i = 0; i < input.length; i++, offset += 2) {
     const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
   }
 }
