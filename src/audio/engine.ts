@@ -15,6 +15,11 @@ import {
   songPatternToGrid,
   getDemoSong,
 } from "../lib/demo-songs";
+import {
+  resolveFrequencyVoice,
+  type FrequencyVoiceConfig,
+  type FrequencyVoiceOptions,
+} from "./frequency";
 
 // Default professional scales
 export class AudioEngine {
@@ -309,119 +314,65 @@ export class AudioEngine {
     );
   }
 
+  /** Pure voice resolution for an arbitrary frequency (no AudioContext). */
+  buildFrequencyVoice(
+    hz: number,
+    velocity = 0.8,
+    options: FrequencyVoiceOptions = {},
+  ): FrequencyVoiceConfig {
+    return resolveFrequencyVoice(hz, this.drumType, { velocity, ...options });
+  }
+
+  /**
+   * Play handpan/tongue synthesis at any frequency in Hz.
+   * Returns the resolved voice for UI feedback. Safe without AudioContext (Node/tests).
+   */
+  triggerFrequency(
+    hz: number,
+    velocity = 0.8,
+    options: FrequencyVoiceOptions = {},
+  ): FrequencyVoiceConfig {
+    const voice = this.buildFrequencyVoice(hz, velocity, options);
+    try {
+      this.init();
+    } catch {
+      return voice;
+    }
+    if (!this.ctx || !this.reverbDryGain) return voice;
+    this.synthesizeVoice(voice);
+    return voice;
+  }
+
   // Live Sound Synthesis with Overtone Modeling and Impact Noise
   triggerNote(noteId: number, velocity = 0.8) {
     this.init(); // Ensure Web Audio is started
 
     if (!this.ctx) return;
-    const now = this.ctx.currentTime;
     const note = this.notes[noteId];
     if (!note) return;
 
-    // Apply cents fine tuning
     const pitchMultiplier = Math.pow(2, (note.fineTune || 0) / 1200);
     const freq = note.baseFreq * pitchMultiplier;
 
-    // Local gain node for note velocity and individual volume settings
-    const voiceGain = this.ctx.createGain();
-    voiceGain.gain.setValueAtTime(0, now);
-    // Envelope attack
-    voiceGain.gain.linearRampToValueAtTime(
-      note.volume * velocity * 0.45,
-      now + note.attack,
-    );
-    // Exponential decay to silence
-    voiceGain.gain.exponentialRampToValueAtTime(
-      0.00001,
-      now + note.attack + note.decay,
-    );
-
-    // Overtone nodes to emulate handpan / steel tongue physical vibration
-    const osc1 = this.ctx.createOscillator();
-    // Warm custom timbre
-    osc1.type = this.drumType === "handpan" ? "sine" : "triangle";
-    osc1.frequency.setValueAtTime(freq, now);
-
-    // Overtone 2 (Octave or 2.4th harmonic)
-    const osc2 = this.ctx.createOscillator();
-    osc2.type = "sine";
-    osc2.frequency.setValueAtTime(freq * note.overtoneRatio2, now);
-    const overtoneGain2 = this.ctx.createGain();
-    overtoneGain2.gain.setValueAtTime(note.overtoneGain2, now);
-    osc2.connect(overtoneGain2);
-    overtoneGain2.connect(voiceGain);
-
-    // Overtone 3 (Fifth or 3.8th harmonic)
-    const osc3 = this.ctx.createOscillator();
-    osc3.type = "sine";
-    osc3.frequency.setValueAtTime(freq * note.overtoneRatio3, now);
-    const overtoneGain3 = this.ctx.createGain();
-    overtoneGain3.gain.setValueAtTime(note.overtoneGain3, now);
-    osc3.connect(overtoneGain3);
-    overtoneGain3.connect(voiceGain);
-
-    osc1.connect(voiceGain);
-
-    // Brief Wood/Metal impact click / Strike transient (Noise Burst)
-    const noiseBuffer = this.createNoiseBuffer();
-    if (noiseBuffer) {
-      const noiseNode = this.ctx.createBufferSource();
-      noiseNode.buffer = noiseBuffer;
-
-      const noiseFilter = this.ctx.createBiquadFilter();
-      noiseFilter.type = "bandpass";
-      noiseFilter.frequency.setValueAtTime(
-        this.drumType === "handpan" ? 1200 : 2200,
-        now,
-      );
-      noiseFilter.Q.setValueAtTime(3, now);
-
-      const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.35 * velocity, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015); // extremely fast decay
-
-      noiseNode.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(voiceGain);
-      noiseNode.start(now);
-      noiseNode.stop(now + 0.05);
-    }
-
-    // Dynamic processing per-note compressor option
-    const noteCompressor = this.ctx.createDynamicsCompressor();
-    noteCompressor.threshold.setValueAtTime(note.compressorThreshold, now);
-    noteCompressor.ratio.setValueAtTime(3.5, now);
-    noteCompressor.attack.setValueAtTime(0.005, now);
-    noteCompressor.release.setValueAtTime(0.1, now);
-
-    // Reverb send gain node
-    const reverbSendGain = this.ctx.createGain();
-    reverbSendGain.gain.setValueAtTime(note.reverbSend, now);
-
-    // Connect paths
-    voiceGain.connect(noteCompressor);
-
-    // Path A: Dry Master Bus
-    noteCompressor.connect(this.reverbDryGain!);
-
-    // Path B: Wet Reverb Bus
-    noteCompressor.connect(reverbSendGain);
-    this.reverbCombs.forEach((comb) => {
-      reverbSendGain.connect(comb.delay);
+    this.synthesizeVoice({
+      frequency: freq,
+      label: note.label,
+      velocity,
+      volume: note.volume,
+      attack: note.attack,
+      decay: note.decay,
+      reverbSend: note.reverbSend,
+      overtoneRatio2: note.overtoneRatio2,
+      overtoneRatio3: note.overtoneRatio3,
+      overtoneGain2: note.overtoneGain2,
+      overtoneGain3: note.overtoneGain3,
+      oscType: this.drumType === "handpan" ? "sine" : "triangle",
+      noiseBandHz: this.drumType === "handpan" ? 1200 : 2200,
+      compressorThreshold: note.compressorThreshold,
     });
 
-    // Fire oscillators
-    osc1.start(now);
-    osc2.start(now);
-    osc3.start(now);
-
-    const stopTime = now + note.attack + note.decay + 0.1;
-    osc1.stop(stopTime);
-    osc2.stop(stopTime);
-    osc3.stop(stopTime);
-
     // If recording looper is active, append event
-    if (this.looperRecording) {
+    if (this.looperRecording && this.ctx) {
       const relTime =
         (this.ctx.currentTime - this.looperStartTime) % this.looperLoopLength;
       this.looperEvents.push({
@@ -431,6 +382,92 @@ export class AudioEngine {
         velocity,
       });
     }
+  }
+
+  /** Shared synthesizer for pad notes and free frequency playback. */
+  private synthesizeVoice(voice: FrequencyVoiceConfig) {
+    if (!this.ctx || !this.reverbDryGain) return;
+    const now = this.ctx.currentTime;
+    const freq = voice.frequency;
+
+    const voiceGain = this.ctx.createGain();
+    voiceGain.gain.setValueAtTime(0, now);
+    voiceGain.gain.linearRampToValueAtTime(
+      voice.volume * voice.velocity * 0.45,
+      now + voice.attack,
+    );
+    voiceGain.gain.exponentialRampToValueAtTime(
+      0.00001,
+      now + voice.attack + voice.decay,
+    );
+
+    const osc1 = this.ctx.createOscillator();
+    osc1.type = voice.oscType;
+    osc1.frequency.setValueAtTime(freq, now);
+
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(freq * voice.overtoneRatio2, now);
+    const overtoneGain2 = this.ctx.createGain();
+    overtoneGain2.gain.setValueAtTime(voice.overtoneGain2, now);
+    osc2.connect(overtoneGain2);
+    overtoneGain2.connect(voiceGain);
+
+    const osc3 = this.ctx.createOscillator();
+    osc3.type = "sine";
+    osc3.frequency.setValueAtTime(freq * voice.overtoneRatio3, now);
+    const overtoneGain3 = this.ctx.createGain();
+    overtoneGain3.gain.setValueAtTime(voice.overtoneGain3, now);
+    osc3.connect(overtoneGain3);
+    overtoneGain3.connect(voiceGain);
+
+    osc1.connect(voiceGain);
+
+    const noiseBuffer = this.createNoiseBuffer();
+    if (noiseBuffer) {
+      const noiseNode = this.ctx.createBufferSource();
+      noiseNode.buffer = noiseBuffer;
+
+      const noiseFilter = this.ctx.createBiquadFilter();
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.setValueAtTime(voice.noiseBandHz, now);
+      noiseFilter.Q.setValueAtTime(3, now);
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.35 * voice.velocity, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
+
+      noiseNode.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(voiceGain);
+      noiseNode.start(now);
+      noiseNode.stop(now + 0.05);
+    }
+
+    const noteCompressor = this.ctx.createDynamicsCompressor();
+    noteCompressor.threshold.setValueAtTime(voice.compressorThreshold, now);
+    noteCompressor.ratio.setValueAtTime(3.5, now);
+    noteCompressor.attack.setValueAtTime(0.005, now);
+    noteCompressor.release.setValueAtTime(0.1, now);
+
+    const reverbSendGain = this.ctx.createGain();
+    reverbSendGain.gain.setValueAtTime(voice.reverbSend, now);
+
+    voiceGain.connect(noteCompressor);
+    noteCompressor.connect(this.reverbDryGain);
+    noteCompressor.connect(reverbSendGain);
+    this.reverbCombs.forEach((comb) => {
+      reverbSendGain.connect(comb.delay);
+    });
+
+    osc1.start(now);
+    osc2.start(now);
+    osc3.start(now);
+
+    const stopTime = now + voice.attack + voice.decay + 0.1;
+    osc1.stop(stopTime);
+    osc2.stop(stopTime);
+    osc3.stop(stopTime);
   }
 
   private createNoiseBuffer(): AudioBuffer | null {

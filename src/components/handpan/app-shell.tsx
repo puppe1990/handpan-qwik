@@ -11,8 +11,16 @@ import { DspLab } from "./dsp-lab";
 import { MidiSettings } from "./midi-settings";
 import { CloudLibrary } from "./cloud-library";
 import { AutomationPanel } from "./automation";
+import { FrequencyPlayer } from "./frequency-player";
 
-type TabId = "sequencer" | "looper" | "dsp" | "midi" | "cloud" | "automation";
+type TabId =
+  | "sequencer"
+  | "looper"
+  | "dsp"
+  | "midi"
+  | "cloud"
+  | "automation"
+  | "frequency";
 
 const THEME_KEY = "handpan-theme";
 
@@ -79,6 +87,11 @@ export const AppShell = component$(() => {
       active: "bg-rose-500 text-slate-100",
     },
     { id: "dsp", label: "DSP Lab", active: "bg-purple-500 text-slate-100" },
+    {
+      id: "frequency",
+      label: "Frequency",
+      active: "bg-cyan-400 text-zinc-950",
+    },
     {
       id: "automation",
       label: "Modulation",
@@ -403,6 +416,7 @@ export const AppShell = component$(() => {
               )}
               {state.activeTab === "looper" && <Looper />}
               {state.activeTab === "dsp" && <DspLab notes={state.notes} />}
+              {state.activeTab === "frequency" && <FrequencyPlayer />}
               {state.activeTab === "midi" && <MidiSettings />}
               {state.activeTab === "cloud" && <CloudLibrary />}
               {state.activeTab === "automation" && <AutomationPanel />}
