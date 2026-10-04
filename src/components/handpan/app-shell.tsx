@@ -12,13 +12,7 @@ import { MidiSettings } from "./midi-settings";
 import { CloudLibrary } from "./cloud-library";
 import { AutomationPanel } from "./automation";
 
-type TabId =
-  | "sequencer"
-  | "looper"
-  | "dsp"
-  | "midi"
-  | "cloud"
-  | "automation";
+type TabId = "sequencer" | "looper" | "dsp" | "midi" | "cloud" | "automation";
 
 const THEME_KEY = "handpan-theme";
 
@@ -74,10 +68,22 @@ export const AppShell = component$(() => {
   });
 
   const tabs: { id: TabId; label: string; active: string }[] = [
-    { id: "sequencer", label: "Sequencer", active: "bg-emerald-400 text-zinc-950" },
-    { id: "looper", label: "Looper & Rec", active: "bg-rose-500 text-slate-100" },
+    {
+      id: "sequencer",
+      label: "Sequencer",
+      active: "bg-emerald-400 text-zinc-950",
+    },
+    {
+      id: "looper",
+      label: "Looper & Rec",
+      active: "bg-rose-500 text-slate-100",
+    },
     { id: "dsp", label: "DSP Lab", active: "bg-purple-500 text-slate-100" },
-    { id: "automation", label: "Modulation", active: "bg-amber-500 text-zinc-950" },
+    {
+      id: "automation",
+      label: "Modulation",
+      active: "bg-amber-500 text-zinc-950",
+    },
     { id: "midi", label: "Web MIDI", active: "bg-blue-500 text-slate-100" },
     { id: "cloud", label: "Cloud Scales", active: "bg-sky-500 text-zinc-950" },
   ];

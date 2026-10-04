@@ -1,4 +1,9 @@
-import { component$, useStore, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import {
+  component$,
+  useStore,
+  useSignal,
+  useVisibleTask$,
+} from "@builder.io/qwik";
 import type { AutomationTarget, LfoState } from "../../lib/types";
 import { engine } from "../../audio/engine";
 
@@ -76,8 +81,7 @@ export const AutomationPanel = component$(() => {
           else if (lfo.waveform === "triangle")
             val = p < 0.5 ? p * 4 - 1 : 3 - p * 4;
           else val = p * 2 - 1;
-          const y =
-            canvas.height / 2 - val * lfo.depth * (canvas.height / 2.3);
+          const y = canvas.height / 2 - val * lfo.depth * (canvas.height / 2.3);
           if (i === 0) ctx.moveTo(i, y);
           else ctx.lineTo(i, y);
         }

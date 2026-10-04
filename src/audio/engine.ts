@@ -1,19 +1,27 @@
-import { NoteConfig, DrumType, ScalePreset, PresetData, StepSequencerState, MidiMapping, LfoState } from '../lib/types';
-import { SCALE_PRESETS } from './scales';
+import {
+  NoteConfig,
+  DrumType,
+  ScalePreset,
+  PresetData,
+  StepSequencerState,
+  MidiMapping,
+  LfoState,
+} from "../lib/types";
+import { SCALE_PRESETS } from "./scales";
 export { SCALE_PRESETS };
-import { audioBufferToWav } from './wav-encoder';
+import { audioBufferToWav } from "./wav-encoder";
 import {
   type DemoSong,
   songPatternToGrid,
   getDemoSong,
-} from '../lib/demo-songs';
+} from "../lib/demo-songs";
 
 // Default professional scales
 export class AudioEngine {
   ctx: AudioContext | null = null;
-  drumType: DrumType = 'handpan';
+  drumType: DrumType = "handpan";
   notes: NoteConfig[] = [];
-  scaleName: string = 'Celtic Minor';
+  scaleName: string = "Celtic Minor";
 
   // Master Nodes
   private masterGain: GainNode | null = null;
@@ -23,7 +31,11 @@ export class AudioEngine {
   // Algorithmic Reverb Nodes
   private reverbWetGain: GainNode | null = null;
   private reverbDryGain: GainNode | null = null;
-  private reverbCombs: Array<{ delay: DelayNode; feedback: GainNode; filter: BiquadFilterNode }> = [];
+  private reverbCombs: Array<{
+    delay: DelayNode;
+    feedback: GainNode;
+    filter: BiquadFilterNode;
+  }> = [];
   private reverbAllpasses: Array<{ delay: DelayNode; feedback: GainNode }> = [];
 
   // Global Effects Settings
@@ -49,13 +61,18 @@ export class AudioEngine {
     stepsCount: 16,
     isPlaying: false,
     activeStep: -1,
-    grid: {}
+    grid: {},
   };
   onSequencerStep: ((step: number) => void) | null = null;
   private lastSequencerTickTime = 0;
 
   // Realtime Looper Variables
-  looperEvents: Array<{ noteId: number; time: number; duration: number; velocity: number }> = [];
+  looperEvents: Array<{
+    noteId: number;
+    time: number;
+    duration: number;
+    velocity: number;
+  }> = [];
   looperRecording = false;
   looperPlaying = false;
   looperStartTime = 0;
@@ -78,10 +95,10 @@ export class AudioEngine {
   // LFO Automation States
   lfoState: LfoState = {
     enabled: false,
-    target: 'reverbMix',
+    target: "reverbMix",
     frequency: 1,
     depth: 0.5,
-    waveform: 'sine'
+    waveform: "sine",
   };
   private lfoPhase = 0;
   private lastLfoTickTime = 0;
@@ -94,7 +111,8 @@ export class AudioEngine {
 
   init() {
     if (this.ctx) return;
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    this.ctx = new (window.AudioContext ||
+      (window as any).webkitAudioContext)();
     this.setupAudioGraph();
     this.initMidi();
     this.startAnalyserLoop();
@@ -135,7 +153,7 @@ export class AudioEngine {
       feedback.gain.value = this.reverbRoomSize * 0.9;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
+      filter.type = "lowpass";
       filter.frequency.value = 200 + this.reverbDamping * 12000;
 
       // Feedback loops
@@ -165,7 +183,7 @@ export class AudioEngine {
     }
 
     // Connect Combs to Wet gain, and Allpass output to Compressor
-    this.reverbCombs.forEach(comb => {
+    this.reverbCombs.forEach((comb) => {
       comb.delay.connect(this.reverbWetGain!);
     });
     allpassSource.connect(this.compressor);
@@ -201,14 +219,14 @@ export class AudioEngine {
         baseFreq: freq,
         fineTune: 0,
         volume: isDing ? 1.0 : 0.85,
-        overtoneRatio2: this.drumType === 'handpan' ? 2.0 : 2.4, // Octave / Octave-ish
-        overtoneRatio3: this.drumType === 'handpan' ? 3.0 : 3.8, // Compound fifth / Overtones
-        overtoneGain2: this.drumType === 'handpan' ? 0.35 : 0.45,
-        overtoneGain3: this.drumType === 'handpan' ? 0.20 : 0.25,
+        overtoneRatio2: this.drumType === "handpan" ? 2.0 : 2.4, // Octave / Octave-ish
+        overtoneRatio3: this.drumType === "handpan" ? 3.0 : 3.8, // Compound fifth / Overtones
+        overtoneGain2: this.drumType === "handpan" ? 0.35 : 0.45,
+        overtoneGain3: this.drumType === "handpan" ? 0.2 : 0.25,
         attack: 0.002,
-        decay: this.drumType === 'handpan' ? 1.5 : 2.8, // Tongue drum ringing is significantly longer
+        decay: this.drumType === "handpan" ? 1.5 : 2.8, // Tongue drum ringing is significantly longer
         reverbSend: isDing ? 0.45 : 0.35,
-        compressorThreshold: -15
+        compressorThreshold: -15,
       };
     });
   }
@@ -216,7 +234,8 @@ export class AudioEngine {
   setDrumType(type: DrumType) {
     this.drumType = type;
     // Update active scales tuning profiles instantly
-    const activeScale = SCALE_PRESETS.find(s => s.name === this.scaleName) || SCALE_PRESETS[0];
+    const activeScale =
+      SCALE_PRESETS.find((s) => s.name === this.scaleName) || SCALE_PRESETS[0];
     this.loadDefaultNotes(activeScale);
   }
 
@@ -239,7 +258,7 @@ export class AudioEngine {
       { noteId: 5, midiNote: 69 }, // A4
       { noteId: 6, midiNote: 71 }, // B4
       { noteId: 7, midiNote: 72 }, // C5
-      { noteId: 8, midiNote: 74 }  // D5
+      { noteId: 8, midiNote: 74 }, // D5
     ];
   }
 
@@ -247,13 +266,23 @@ export class AudioEngine {
     if (!this.ctx || !this.reverbWetGain || !this.reverbDryGain) return;
     const ctx = this.ctx;
 
-    this.reverbDryGain.gain.setValueAtTime(1.0 - this.reverbMix * 0.5, ctx.currentTime);
-    this.reverbWetGain.gain.setValueAtTime(this.reverbMix * 1.2, ctx.currentTime);
+    this.reverbDryGain.gain.setValueAtTime(
+      1.0 - this.reverbMix * 0.5,
+      ctx.currentTime,
+    );
+    this.reverbWetGain.gain.setValueAtTime(
+      this.reverbMix * 1.2,
+      ctx.currentTime,
+    );
 
     // Update individual comb feedback gains
     this.reverbCombs.forEach((comb) => {
       // roomSize maps to feedback gain: 0 to 0.95
-      comb.feedback.gain.setTargetAtTime(this.reverbRoomSize * 0.92, ctx.currentTime, 0.02);
+      comb.feedback.gain.setTargetAtTime(
+        this.reverbRoomSize * 0.92,
+        ctx.currentTime,
+        0.02,
+      );
       // damping maps to filter cutoff frequency
       const cutoff = 200 + this.reverbDamping * 12000;
       comb.filter.frequency.setTargetAtTime(cutoff, ctx.currentTime, 0.02);
@@ -262,10 +291,22 @@ export class AudioEngine {
 
   updateCompressor() {
     if (!this.ctx || !this.compressor) return;
-    this.compressor.threshold.setValueAtTime(this.compressorThreshold, this.ctx.currentTime);
-    this.compressor.ratio.setValueAtTime(this.compressorRatio, this.ctx.currentTime);
-    this.compressor.attack.setValueAtTime(this.compressorAttack, this.ctx.currentTime);
-    this.compressor.release.setValueAtTime(this.compressorRelease, this.ctx.currentTime);
+    this.compressor.threshold.setValueAtTime(
+      this.compressorThreshold,
+      this.ctx.currentTime,
+    );
+    this.compressor.ratio.setValueAtTime(
+      this.compressorRatio,
+      this.ctx.currentTime,
+    );
+    this.compressor.attack.setValueAtTime(
+      this.compressorAttack,
+      this.ctx.currentTime,
+    );
+    this.compressor.release.setValueAtTime(
+      this.compressorRelease,
+      this.ctx.currentTime,
+    );
   }
 
   // Live Sound Synthesis with Overtone Modeling and Impact Noise
@@ -285,19 +326,25 @@ export class AudioEngine {
     const voiceGain = this.ctx.createGain();
     voiceGain.gain.setValueAtTime(0, now);
     // Envelope attack
-    voiceGain.gain.linearRampToValueAtTime(note.volume * velocity * 0.45, now + note.attack);
+    voiceGain.gain.linearRampToValueAtTime(
+      note.volume * velocity * 0.45,
+      now + note.attack,
+    );
     // Exponential decay to silence
-    voiceGain.gain.exponentialRampToValueAtTime(0.00001, now + note.attack + note.decay);
+    voiceGain.gain.exponentialRampToValueAtTime(
+      0.00001,
+      now + note.attack + note.decay,
+    );
 
     // Overtone nodes to emulate handpan / steel tongue physical vibration
     const osc1 = this.ctx.createOscillator();
     // Warm custom timbre
-    osc1.type = this.drumType === 'handpan' ? 'sine' : 'triangle';
+    osc1.type = this.drumType === "handpan" ? "sine" : "triangle";
     osc1.frequency.setValueAtTime(freq, now);
 
     // Overtone 2 (Octave or 2.4th harmonic)
     const osc2 = this.ctx.createOscillator();
-    osc2.type = 'sine';
+    osc2.type = "sine";
     osc2.frequency.setValueAtTime(freq * note.overtoneRatio2, now);
     const overtoneGain2 = this.ctx.createGain();
     overtoneGain2.gain.setValueAtTime(note.overtoneGain2, now);
@@ -306,7 +353,7 @@ export class AudioEngine {
 
     // Overtone 3 (Fifth or 3.8th harmonic)
     const osc3 = this.ctx.createOscillator();
-    osc3.type = 'sine';
+    osc3.type = "sine";
     osc3.frequency.setValueAtTime(freq * note.overtoneRatio3, now);
     const overtoneGain3 = this.ctx.createGain();
     overtoneGain3.gain.setValueAtTime(note.overtoneGain3, now);
@@ -322,8 +369,11 @@ export class AudioEngine {
       noiseNode.buffer = noiseBuffer;
 
       const noiseFilter = this.ctx.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.setValueAtTime(this.drumType === 'handpan' ? 1200 : 2200, now);
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.setValueAtTime(
+        this.drumType === "handpan" ? 1200 : 2200,
+        now,
+      );
       noiseFilter.Q.setValueAtTime(3, now);
 
       const noiseGain = this.ctx.createGain();
@@ -350,13 +400,13 @@ export class AudioEngine {
 
     // Connect paths
     voiceGain.connect(noteCompressor);
-    
+
     // Path A: Dry Master Bus
     noteCompressor.connect(this.reverbDryGain!);
-    
+
     // Path B: Wet Reverb Bus
     noteCompressor.connect(reverbSendGain);
-    this.reverbCombs.forEach(comb => {
+    this.reverbCombs.forEach((comb) => {
       reverbSendGain.connect(comb.delay);
     });
 
@@ -372,12 +422,13 @@ export class AudioEngine {
 
     // If recording looper is active, append event
     if (this.looperRecording) {
-      const relTime = (this.ctx.currentTime - this.looperStartTime) % this.looperLoopLength;
+      const relTime =
+        (this.ctx.currentTime - this.looperStartTime) % this.looperLoopLength;
       this.looperEvents.push({
         noteId,
         time: relTime,
         duration: note.decay,
-        velocity
+        velocity,
       });
     }
   }
@@ -407,11 +458,14 @@ export class AudioEngine {
   setSequencerStepsCount(count: number) {
     this.sequencerState.stepsCount = count;
     // Resize grid arrays to fit
-    Object.keys(this.sequencerState.grid).forEach(key => {
+    Object.keys(this.sequencerState.grid).forEach((key) => {
       const numKey = Number(key);
       const arr = this.sequencerState.grid[numKey];
       if (arr.length < count) {
-        this.sequencerState.grid[numKey] = [...arr, ...Array(count - arr.length).fill(false)];
+        this.sequencerState.grid[numKey] = [
+          ...arr,
+          ...Array(count - arr.length).fill(false),
+        ];
       } else if (arr.length > count) {
         this.sequencerState.grid[numKey] = arr.slice(0, count);
       }
@@ -421,7 +475,7 @@ export class AudioEngine {
   /** Load a full demo song: scale, drum type, FX, sequencer grid. */
   loadDemoSong(songOrId: DemoSong | string, autoplay = false) {
     const song =
-      typeof songOrId === 'string' ? getDemoSong(songOrId) : songOrId;
+      typeof songOrId === "string" ? getDemoSong(songOrId) : songOrId;
     if (!song) return false;
 
     const scale =
@@ -470,7 +524,8 @@ export class AudioEngine {
   private tickSequencer() {
     if (!this.sequencerState.isPlaying || !this.ctx) return;
 
-    const currentStep = (this.sequencerState.activeStep + 1) % this.sequencerState.stepsCount;
+    const currentStep =
+      (this.sequencerState.activeStep + 1) % this.sequencerState.stepsCount;
     this.sequencerState.activeStep = currentStep;
 
     if (this.onSequencerStep) {
@@ -478,7 +533,7 @@ export class AudioEngine {
     }
 
     // Trigger scheduled notes for this step
-    this.notes.forEach(note => {
+    this.notes.forEach((note) => {
       const active = this.sequencerState.grid[note.id]?.[currentStep];
       if (active) {
         // Trigger with slight velocity variation for more human feeling
@@ -528,7 +583,7 @@ export class AudioEngine {
   }
 
   private clearScheduledLooperTimeouts() {
-    this.triggeredTimeouts.forEach(t => clearTimeout(t));
+    this.triggeredTimeouts.forEach((t) => clearTimeout(t));
     this.triggeredTimeouts = [];
     if (this.looperTimer) {
       clearTimeout(this.looperTimer);
@@ -542,7 +597,7 @@ export class AudioEngine {
     this.clearScheduledLooperTimeouts();
 
     // Schedule all loops to fire at offsets
-    this.looperEvents.forEach(evt => {
+    this.looperEvents.forEach((evt) => {
       const triggerTimeMs = evt.time * 1000;
       const t = setTimeout(() => {
         if (this.looperPlaying) {
@@ -578,10 +633,17 @@ export class AudioEngine {
     this.isAudioRecording = false;
 
     // Build standard audio buffer of exact captured size
-    const totalSamples = this.recordedSamplesLeft.reduce((sum, chunk) => sum + chunk.length, 0);
+    const totalSamples = this.recordedSamplesLeft.reduce(
+      (sum, chunk) => sum + chunk.length,
+      0,
+    );
     if (totalSamples === 0) return null;
 
-    const recordingBuffer = this.ctx.createBuffer(2, totalSamples, this.ctx.sampleRate);
+    const recordingBuffer = this.ctx.createBuffer(
+      2,
+      totalSamples,
+      this.ctx.sampleRate,
+    );
     const outLeft = recordingBuffer.getChannelData(0);
     const outRight = recordingBuffer.getChannelData(1);
 
@@ -620,11 +682,12 @@ export class AudioEngine {
 
     // Compute waveform value [-1, 1]
     let value = 0;
-    if (this.lfoState.waveform === 'sine') {
+    if (this.lfoState.waveform === "sine") {
       value = Math.sin(this.lfoPhase * Math.PI * 2);
-    } else if (this.lfoState.waveform === 'triangle') {
-      value = this.lfoPhase < 0.5 ? this.lfoPhase * 4 - 1 : 3 - this.lfoPhase * 4;
-    } else if (this.lfoState.waveform === 'sawtooth') {
+    } else if (this.lfoState.waveform === "triangle") {
+      value =
+        this.lfoPhase < 0.5 ? this.lfoPhase * 4 - 1 : 3 - this.lfoPhase * 4;
+    } else if (this.lfoState.waveform === "sawtooth") {
       value = this.lfoPhase * 2 - 1;
     }
 
@@ -633,44 +696,56 @@ export class AudioEngine {
 
     // Map to specific parameter
     switch (this.lfoState.target) {
-      case 'reverbMix': {
+      case "reverbMix": {
         const base = this.reverbMix;
         const modulated = Math.max(0, Math.min(1, base * modulatedMultiplier));
         if (this.reverbWetGain && this.reverbDryGain) {
-          this.reverbDryGain.gain.setValueAtTime(1.0 - modulated * 0.5, ctx.currentTime);
-          this.reverbWetGain.gain.setValueAtTime(modulated * 1.2, ctx.currentTime);
+          this.reverbDryGain.gain.setValueAtTime(
+            1.0 - modulated * 0.5,
+            ctx.currentTime,
+          );
+          this.reverbWetGain.gain.setValueAtTime(
+            modulated * 1.2,
+            ctx.currentTime,
+          );
         }
         break;
       }
-      case 'reverbRoomSize': {
+      case "reverbRoomSize": {
         const base = this.reverbRoomSize;
-        const modulated = Math.max(0.1, Math.min(0.98, base * modulatedMultiplier));
-        this.reverbCombs.forEach(comb => {
+        const modulated = Math.max(
+          0.1,
+          Math.min(0.98, base * modulatedMultiplier),
+        );
+        this.reverbCombs.forEach((comb) => {
           comb.feedback.gain.setValueAtTime(modulated * 0.92, ctx.currentTime);
         });
         break;
       }
-      case 'compressorThreshold': {
+      case "compressorThreshold": {
         // Range: -60 to -5 dB
-        const range = -5 - (-60);
+        const range = -5 - -60;
         const modulated = -60 + modulatedMultiplier * range;
         if (this.compressor) {
           this.compressor.threshold.setValueAtTime(modulated, ctx.currentTime);
         }
         break;
       }
-      case 'globalDecay': {
+      case "globalDecay": {
         // Multiply decay times of notes
-        this.notes.forEach(note => {
-          const baseDecay = this.drumType === 'handpan' ? 1.5 : 2.8;
-          note.decay = Math.max(0.2, Math.min(6.0, baseDecay * (0.4 + modulatedMultiplier * 1.5)));
+        this.notes.forEach((note) => {
+          const baseDecay = this.drumType === "handpan" ? 1.5 : 2.8;
+          note.decay = Math.max(
+            0.2,
+            Math.min(6.0, baseDecay * (0.4 + modulatedMultiplier * 1.5)),
+          );
         });
         break;
       }
-      case 'overtoneRatio': {
+      case "overtoneRatio": {
         // Add subtle vibrato / pitch drift to overtone ratios
-        this.notes.forEach(note => {
-          const baseRatio = this.drumType === 'handpan' ? 2.0 : 2.4;
+        this.notes.forEach((note) => {
+          const baseRatio = this.drumType === "handpan" ? 2.0 : 2.4;
           note.overtoneRatio2 = baseRatio + (modulatedMultiplier - 0.5) * 0.15;
         });
         break;
@@ -680,26 +755,31 @@ export class AudioEngine {
 
   // --- MIDI DEVICE INTEGRATION (WEB MIDI API) ---
   private initMidi() {
-    if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) {
-      console.warn('Web MIDI not supported in this browser.');
+    if (typeof navigator === "undefined" || !navigator.requestMIDIAccess) {
+      console.warn("Web MIDI not supported in this browser.");
       return;
     }
 
-    navigator.requestMIDIAccess()
-      .then(access => {
+    navigator
+      .requestMIDIAccess()
+      .then((access) => {
         this.midiAccess = access;
         access.onstatechange = () => {
           if (this.onMidiStateChange) this.onMidiStateChange();
         };
         // Setup inputs
         const inputs = access.inputs.values();
-        for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
+        for (
+          let input = inputs.next();
+          input && !input.done;
+          input = inputs.next()
+        ) {
           input.value.onmidimessage = (msg) => this.handleMidiMessage(msg);
         }
         if (this.onMidiStateChange) this.onMidiStateChange();
       })
-      .catch(err => {
-        console.warn('Could not access MIDI devices:', err);
+      .catch((err) => {
+        console.warn("Could not access MIDI devices:", err);
       });
   }
 
@@ -707,8 +787,12 @@ export class AudioEngine {
     if (!this.midiAccess) return [];
     const devices: string[] = [];
     const inputs = this.midiAccess.inputs.values();
-    for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
-      devices.push(input.value.name || 'Unknown MIDI Device');
+    for (
+      let input = inputs.next();
+      input && !input.done;
+      input = inputs.next()
+    ) {
+      devices.push(input.value.name || "Unknown MIDI Device");
     }
     return devices;
   }
@@ -727,7 +811,9 @@ export class AudioEngine {
       if (this.midiLearnActiveNoteId !== null) {
         const targetId = this.midiLearnActiveNoteId;
         // Map this MIDI key to the note config
-        this.midiMappings = this.midiMappings.filter(m => m.noteId !== targetId);
+        this.midiMappings = this.midiMappings.filter(
+          (m) => m.noteId !== targetId,
+        );
         this.midiMappings.push({ noteId: targetId, midiNote: note });
         this.midiLearnActiveNoteId = null; // deactivate
         if (this.onMidiStateChange) this.onMidiStateChange();
@@ -736,7 +822,7 @@ export class AudioEngine {
       }
 
       // Check mapping
-      const mapping = this.midiMappings.find(m => m.midiNote === note);
+      const mapping = this.midiMappings.find((m) => m.midiNote === note);
       if (mapping) {
         this.triggerNote(mapping.noteId, velocity / 127);
       }
@@ -754,14 +840,14 @@ export class AudioEngine {
       reverbConfig: {
         roomSize: this.reverbRoomSize,
         damping: this.reverbDamping,
-        mix: this.reverbMix
+        mix: this.reverbMix,
       },
       compressorConfig: {
         threshold: this.compressorThreshold,
         ratio: this.compressorRatio,
         attack: this.compressorAttack,
-        release: this.compressorRelease
-      }
+        release: this.compressorRelease,
+      },
     };
   }
 

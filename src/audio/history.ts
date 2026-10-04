@@ -1,5 +1,5 @@
-import { engine } from './engine';
-import { DrumType, NoteConfig } from '../lib/types';
+import { engine } from "./engine";
+import { DrumType, NoteConfig } from "../lib/types";
 
 export interface HistorySnapshot {
   drumType: DrumType;
@@ -53,7 +53,7 @@ class HistoryManager {
   saveState() {
     if (this.isApplyingHistory) return;
     const snapshot = this.createSnapshot();
-    
+
     // Avoid duplicate successive states (simple deep check or fast stringify comparison)
     if (this.undoStack.length > 0) {
       const last = this.undoStack[this.undoStack.length - 1];
@@ -81,7 +81,7 @@ class HistoryManager {
 
   undo() {
     if (!this.canUndo()) return;
-    
+
     this.isApplyingHistory = true;
     const currentState = this.createSnapshot();
     this.redoStack.push(currentState);

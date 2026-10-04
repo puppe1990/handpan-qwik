@@ -23,7 +23,12 @@ export const Analyzer = component$(() => {
       let x = 0;
       for (let i = 0; i < dataArray.length; i++) {
         const barHeight = (dataArray[i] / 255) * canvas.height * 0.95;
-        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 1.5, barHeight);
+        canvasCtx.fillRect(
+          x,
+          canvas.height - barHeight,
+          barWidth - 1.5,
+          barHeight,
+        );
         x += barWidth;
       }
     };
